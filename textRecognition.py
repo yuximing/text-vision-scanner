@@ -41,7 +41,7 @@ def main():
 
 def recognizeText():
     # load image
-    image = cv2.imread("images/fortunecow.png", cv2.IMREAD_COLOR)
+    image = cv2.imread("images/random.png", cv2.IMREAD_COLOR)
     
     net = cv2.dnn.readNet('crnn_cs_CN.onnx')
     model = cv2.dnn.TextRecognitionModel(net)
@@ -69,7 +69,25 @@ def recognizeText():
     model_detect = cv2.dnn.TextDetectionModel_EAST(net_detect)
     (detections, confidence) = getDetectionPoints(model_detect, image)
 
-    out = model.recognize(image, detections)
+    for detection in detections:
+        bl = detection[0]
+        tl = detection[1]
+        tr = detection[2]
+        br = detection[3]
+        
+        minh = min(bl[0], tl[0])
+        maxh = max(br[0], tr[0])
+        minv = min(tl[1], tr[1])
+        maxv = max(bl[1], br[1])
+        
+        image = image[minv:maxv, minh:maxh]
+        plt.figure()
+        plt.imshow(image)
+        plt.show()
+        
+        print(detection)
+    
+    out = model.recognize(image)
     print(out)
     
 if __name__ == "__main__":
