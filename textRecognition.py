@@ -183,20 +183,20 @@ if __name__ == "__main__":
     recognizeText()
 
 
-a = np.array([[1,4], [3,1]])
+# a = np.array([[1,4], [3,1]])
 
-a.sort(axis=1)
+# a.sort(axis=1)
 
-a
-array([[1, 4],
-       [1, 3]])
+# a
+# array([[1, 4],
+#        [1, 3]])
 
-a.sort(axis=0)
+# a.sort(axis=0)
 
-a
-array([[1, 3],
-       [1, 4]])
-[[1, 4], [3, 1]] axis = 1
+# a
+# array([[1, 3],
+#        [1, 4]])
+# [[1, 4], [3, 1]] axis = 1
 
-row = [[ [], [], [], [] ] [dim2] [dim3]]
-dim = [[] [] [] []]
+# row = [[ [], [], [], [] ] [dim2] [dim3]]
+# dim = [[] [] [] []]
