@@ -99,8 +99,9 @@ def orderWords(detections, imageDimensions):
     # display the contours on a black bg
 
     # Create black background
-    black_img = np.zeros((imageDimensions[0], imageDimensions[1], 1), dtype=np.int32)
+    black_img = np.zeros((imageDimensions[0], imageDimensions[1]), dtype=np.int32)
     black_img = cv2.polylines(black_img, detections, isClosed=True, color=(255,), thickness=1)
+    sum_of_rows = np.sum(black_img, axis=1)
 
     # DO NOT DELETE ME
     # [ 
@@ -110,27 +111,19 @@ def orderWords(detections, imageDimensions):
     #     [ [] [] [] []],
     # ]
 
-    sum_of_rows = np.sum(black_img, axis=1)
-    # print(sum_of_rows)
-
     lines = []
 
-    NOT_FOUND_YET = -1
-    start_y, end_y = -1, -1
+    start_y, end_y = -1, -1  # -1 means that y hasn't been selected yet
     for y, sum in enumerate(sum_of_rows):
-        if sum > 0:
+        if sum > 0:  # detected contour
             if start_y == -1:
                 start_y = y
-        else:  # sum == 0, nothing
+        else:  # no contour
             if start_y > -1:
                 end_y = y
                 lines.append((start_y, end_y))
-                start_y = -1
-                end_y = -1
+                start_y, end_y = -1, -1
 
-    print(lines)
-
-    
     orderedWords = [[] for _ in range(len(lines))]
     
     # line grouping
@@ -147,35 +140,22 @@ def orderWords(detections, imageDimensions):
         for i, line in enumerate(lines):
             if minv >= line[0] and maxv <= line[1]:
                 orderedWords[i].append(detection)
-    for row in orderedWords:
-        print(row)
 
-    print("BEFORE ^^^^^^^^^^^")
-
-    # print(orderedWords)
-    def custom_sort(contours):
-        return [contour[0][0] for contour in contours]
-    # [[x, y] [x, y] [x, y] [x, y]]
-    for row in orderedWords:
-        # predicate = 
-        # row.sort(predicate)
-        # just_first = custom_sort(row)
-        # [25, 235 , 52142]
-        # just_first.sort(axis=0)
-        ordering = np.argsort(np.array(row), axis=0)
-        print(ordering)
-        print(np.array(row))
-        print(row)
-        np.take_along_axis(np.array(row), ordering, axis=0)
-        # orderedWords = sorted(row, key=lambda detection: min(detection[0][0], detection[1][0]))
-    
+    # # print the rows
     # for row in orderedWords:
     #     print(row)
-    # sum_of_rows = cv2.threshold(sum_of_rows, thresh=1, maxval=255, type=cv2.THRESH_BINARY)
-    
-    # plt.figure()
-    # plt.imshow(black_img, cmap="gray")
-    # plt.show()
+
+    sum_of_rows = sum_of_rows.astype(np.uint8)
+    sum_of_rows = np.expand_dims(sum_of_rows, axis=1)
+    sum_of_rows = np.clip(sum_of_rows, 0, 255)
+    _, sum_of_rows = cv2.threshold(sum_of_rows, 1, 255, cv2.THRESH_BINARY)
+
+    ax1 = plt.subplot(121)
+    plt.imshow(black_img, cmap='gray', aspect='auto')
+    ax2 = plt.subplot(122)
+    plt.imshow(sum_of_rows, cmap="gray", aspect='auto')
+    plt.show()
+
     return orderedWords
     
 if __name__ == "__main__":
