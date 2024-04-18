@@ -42,7 +42,7 @@ def main():
 
 def recognizeText():
     # load image
-    image = cv2.imread("images/eclipse.png", cv2.IMREAD_COLOR)
+    image = cv2.imread("images/fortunecow.png", cv2.IMREAD_COLOR)
     
     net = cv2.dnn.readNet('crnn_cs_CN.onnx')
     model = cv2.dnn.TextRecognitionModel(net)
@@ -71,28 +71,31 @@ def recognizeText():
     (detections, confidence) = getDetectionPoints(model_detect, image)
 
 
-    words = []
-    for detection in detections:
-        bl = detection[0]
-        tl = detection[1]
-        tr = detection[2]
-        br = detection[3]
-        
-        minh = min(bl[0], tl[0])
-        maxh = max(br[0], tr[0])
-        minv = min(tl[1], tr[1])
-        maxv = max(bl[1], br[1])
-        
-        img_cropped = image[minv:maxv, minh:maxh]
-        # plt.figure()
-        # plt.imshow(img_cropped)
-        # plt.show()
-        word = model.recognize(img_cropped)
-        words.append(word)
-
-        # print(detection)
     
-    orderWords(detections, image.shape) # TEST
+    words = orderWords(detections, image.shape) # TEST
+    for line in words:
+        for detection in line:
+            bl = detection[0]
+            tl = detection[1]
+            tr = detection[2]
+            br = detection[3]
+            
+            minh = min(bl[0], tl[0])
+            maxh = max(br[0], tr[0])
+            minv = min(tl[1], tr[1])
+            maxv = max(bl[1], br[1])
+            
+            img_cropped = image[minv:maxv, minh:maxh]
+            # plt.figure()
+            # plt.imshow(img_cropped)
+            # plt.show()
+            word = model.recognize(img_cropped)
+            print(word)
+            # words.append(word)
+
+        print()
+            # print(detection)
+    
 
 
 def orderWords(detections, imageDimensions):
@@ -141,7 +144,9 @@ def orderWords(detections, imageDimensions):
             if minv >= line[0] and maxv <= line[1]:
                 orderedWords[i].append(detection)
 
-    # # print the rows
+    for i, row in enumerate(orderedWords):
+        orderedWords[i] = sorted(row, key=lambda mat: mat[0][0])
+    # # # print the rows
     # for row in orderedWords:
     #     print(row)
 
