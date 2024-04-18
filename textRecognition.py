@@ -41,8 +41,16 @@ def main():
     cv2.destroyAllWindows()
 
 def recognizeText():
+    from openai import OpenAI
+    from dotenv import load_dotenv
+    import os
+    # from openAIConnect import OpenAI
+    load_dotenv()
+    client = OpenAI(
+        api_key = os.environ.get("OPENAI_API_KEY")
+    )
     # load image
-    image = cv2.imread("images/fortunecow.png", cv2.IMREAD_COLOR)
+    image = cv2.imread("images/eclipse.png", cv2.IMREAD_COLOR)
     
     net = cv2.dnn.readNet('crnn_cs_CN.onnx')
     model = cv2.dnn.TextRecognitionModel(net)
@@ -72,7 +80,8 @@ def recognizeText():
 
 
     
-    words = orderWords(detections, image.shape) # TEST
+    words = orderWords(detections, image.shape)
+    words_arr = []
     for line in words:
         for detection in line:
             bl = detection[0]
@@ -90,13 +99,20 @@ def recognizeText():
             # plt.imshow(img_cropped)
             # plt.show()
             word = model.recognize(img_cropped)
-            print(word)
-            # words.append(word)
+            # print(word)
+            words_arr.append(word)
+        # print()
 
-        print()
-            # print(detection)
-    
+    concat_str = " ".join(words_arr)
+    completion = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "system", "content": "you are a nerdy assistant, answer with big nerdy words"},
+        {"role": "user", "content": f"tell me what the following text is talking about: {concat_str}"}
+    ]
+    )
 
+    print(completion.choices[0].message.content)
 
 def orderWords(detections, imageDimensions):
     # display the contours on a black bg
@@ -155,11 +171,11 @@ def orderWords(detections, imageDimensions):
     sum_of_rows = np.clip(sum_of_rows, 0, 255)
     _, sum_of_rows = cv2.threshold(sum_of_rows, 1, 255, cv2.THRESH_BINARY)
 
-    ax1 = plt.subplot(121)
-    plt.imshow(black_img, cmap='gray', aspect='auto')
-    ax2 = plt.subplot(122)
-    plt.imshow(sum_of_rows, cmap="gray", aspect='auto')
-    plt.show()
+    # ax1 = plt.subplot(121)
+    # plt.imshow(black_img, cmap='gray', aspect='auto')
+    # ax2 = plt.subplot(122)
+    # plt.imshow(sum_of_rows, cmap="gray", aspect='auto')
+    # plt.show()
 
     return orderedWords
     
