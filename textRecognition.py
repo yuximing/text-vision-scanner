@@ -41,16 +41,8 @@ def main():
     cv2.destroyAllWindows()
 
 def recognizeText():
-    from openai import OpenAI
-    from dotenv import load_dotenv
-    import os
-    # from openAIConnect import OpenAI
-    load_dotenv()
-    client = OpenAI(
-        api_key = os.environ.get("OPENAI_API_KEY")
-    )
     # load image
-    image = cv2.imread("images/eclipse.png", cv2.IMREAD_COLOR)
+    image = cv2.imread("images/eclipserotated.png", cv2.IMREAD_COLOR)
     
     net = cv2.dnn.readNet('crnn_cs_CN.onnx')
     model = cv2.dnn.TextRecognitionModel(net)
@@ -71,15 +63,19 @@ def recognizeText():
     
     model.setInputParams(scale, inputSize, mean)
 
-    # std::string recognitionResult = recognizer.recognize(image);
-    # std::cout << "'" << recognitionResult << "'" << std::endl;
-    # load model
     net_detect = cv2.dnn.readNet('frozen_east_text_detection.pb')
     model_detect = cv2.dnn.TextDetectionModel_EAST(net_detect)
+
+    image_height, image_width = image.shape[:2]
     (detections, confidence) = getDetectionPoints(model_detect, image)
-
-
+    rot_mat = cv2.getRotationMatrix2D((image_width // 2, image_height // 2), -getAverageAngle(detections), 1.0)
+    image = cv2.warpAffine(image, rot_mat, (image_width, image_height))
+    (detections, confidence) = getDetectionPoints(model_detect, image)
     
+    ax1 = plt.subplot(111)
+    plt.imshow(image, cmap='gray', aspect='auto')
+    plt.show()
+
     words = orderWords(detections, image.shape)
     words_arr = []
     for line in words:
@@ -104,22 +100,23 @@ def recognizeText():
         # print()
 
     concat_str = " ".join(words_arr)
-    completion = client.chat.completions.create(
-    model="gpt-3.5-turbo",
-    messages=[
-        {"role": "system", "content": "you are a nerdy assistant, answer with big nerdy words"},
-        {"role": "user", "content": f"tell me what the following text is talking about: {concat_str}"}
-    ]
-    )
 
-    print(completion.choices[0].message.content)
+    print(concat_str)
 
 def orderWords(detections, imageDimensions):
     # display the contours on a black bg
 
     # Create black background
     black_img = np.zeros((imageDimensions[0], imageDimensions[1]), dtype=np.int32)
-    black_img = cv2.polylines(black_img, detections, isClosed=True, color=(255,), thickness=1)
+    
+    det = list(detections)
+    for detection in det:
+        detection[0][1] -= 2
+        detection[1][1] += 2
+        detection[2][1] += 2
+        detection[3][1] -= 2
+        
+    black_img = cv2.polylines(black_img, tuple(det), isClosed=True, color=(255,), thickness=1)
     sum_of_rows = np.sum(black_img, axis=1)
 
     # DO NOT DELETE ME
@@ -155,9 +152,11 @@ def orderWords(detections, imageDimensions):
 
         minv = min(tl[1], tr[1])
         maxv = max(bl[1], br[1])
+        
+        centerv = minv + (maxv - minv) // 2
 
         for i, line in enumerate(lines):
-            if minv >= line[0] and maxv <= line[1]:
+            if centerv >= line[0] and centerv <= line[1]:
                 orderedWords[i].append(detection)
 
     for i, row in enumerate(orderedWords):
@@ -171,14 +170,38 @@ def orderWords(detections, imageDimensions):
     sum_of_rows = np.clip(sum_of_rows, 0, 255)
     _, sum_of_rows = cv2.threshold(sum_of_rows, 1, 255, cv2.THRESH_BINARY)
 
-    # ax1 = plt.subplot(121)
-    # plt.imshow(black_img, cmap='gray', aspect='auto')
-    # ax2 = plt.subplot(122)
-    # plt.imshow(sum_of_rows, cmap="gray", aspect='auto')
-    # plt.show()
+    ax1 = plt.subplot(121)
+    plt.imshow(black_img, cmap='gray', aspect='auto')
+    ax2 = plt.subplot(122)
+    plt.imshow(sum_of_rows, cmap="gray", aspect='auto')
+    plt.show()
 
     return orderedWords
+
+# get median angle
+def getAverageAngle(detections):
+
+    if len(detections) == 0:
+        return 0
+
+    angles = []
+    for detection in detections:
+
+        bl = detection[0]  # bottom-left
+        tl = detection[1]
+        tr = detection[2]
+        br = detection[3]
+        
+        ref_dir = np.array([0, 1], dtype=np.float64)
+        direction = np.array([tr[0] - tl[0], tr[1] - tl[1]], dtype=np.float64)
+        direction /= np.linalg.norm(direction)  # normalize vector
+        
+        ang_rad = np.arccos(np.clip(np.dot(ref_dir, direction), -1.0, 1.0))
+        angles.append(np.rad2deg(ang_rad) - 90)
     
+    angles.sort()
+    return angles[len(angles) // 2]
+
 if __name__ == "__main__":
     # main()
     recognizeText()
